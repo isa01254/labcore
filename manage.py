@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import os
 import sys
 
@@ -8,13 +9,7 @@ def main():
         'labcore_web.settings'
     )
 
-    try:
-        from django.core.management import execute_from_command_line
-    except ImportError as exc:
-        raise ImportError(
-            "Não foi possível importar o Django."
-        ) from exc
-
+    from django.core.management import execute_from_command_line
     execute_from_command_line(sys.argv)
 
 
