@@ -1,28 +1,3514 @@
-<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>LabCore</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;background:#0a0a12;color:#e0e0e0;min-height:100vh;display:flex;flex-direction:column}header{background:#0d1117;border-bottom:2px solid #1f6feb;padding:.8rem 1rem;display:flex;justify-content:space-between;align-items:center}.logo{font-weight:800;color:#58a6ff;font-size:1.4rem}.btn{padding:.4rem .8rem;border-radius:6px;border:1px solid #30363d;background:#21262d;color:#fff;text-decoration:none;font-weight:600}#stage{flex:1;display:flex;align-items:center;justify-content:center;padding:1rem;flex-direction:column;gap:1rem}#gameWrap{position:relative;width:640px;height:360px;background:#0a1629;border:2px solid #30363d;border-radius:12px;overflow:hidden}#player{position:absolute;width:20px;height:28px;background:#e8c99a;border:2px solid #000;border-radius:4px;z-index:10}#player::after{content:"";position:absolute;top:-6px;left:2px;width:16px;height:8px;background:#5a3a1a;border-radius:4px}.wall{position:absolute;background:#1b2a4a;border:1px solid #2a3a5a}.obj{position:absolute;width:48px;height:48px;background:#1e3a5f;border:2px solid #58a6ff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:22px}.obj.done{border-color:#2ea043;background:#14301f;opacity:.6}.prompt{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);border:1px solid #58a6ff;padding:.4rem .8rem;border-radius:6px;font-size:.8rem;display:none}.modal{position:absolute;inset:0;background:rgba(5,10,20,.92);display:none;align-items:center;justify-content:center;z-index:20}.modalBox{background:#161b22;border:2px solid #1f6feb;border-radius:12px;padding:1.2rem;width:420px;text-align:center}.optBtn{width:100%;padding:.6rem;margin:.4rem 0;background:#21262d;border:1px solid #30363d;border-radius:6px;color:#fff;cursor:pointer}.hud{position:absolute;top:6px;left:6px;display:flex;gap:1rem;font-size:.8rem;background:rgba(0,0,0,.6);padding:.3rem .6rem;border-radius:6px}.screen{position:absolute;inset:0;background:#0a0a12;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:30}.mapBtn{width:300px;padding:.8rem;background:#21262d;border:2px solid #30363d;border-radius:8px;color:#fff;cursor:pointer;font-weight:700}.mapBtn:disabled{opacity:.4}.mapBtn.done{border-color:#2ea043}.keys{font-size:.75rem;color:#8b949e}.keys span{background:#21262d;border:1px solid #30363d;padding:.1rem .4rem;border-radius:4px;color:#58a6ff}</style></head><body>
-<header><div class="logo">LABCORE</div><div style="display:flex;gap:.5rem;align-items:center">{% if user.is_authenticated %}<span>{{user.username}} - <b id="hudScore">0</b> pts</span><a class="btn" href="/profile/">Perfil</a><a class="btn" href="/logout/">Sair</a>{% else %}<a class="btn" href="/login/">Entrar</a><a class="btn" href="/register/">Cadastrar</a>{% endif %}</div></header>
-<div id="stage"><div id="gameWrap"><div class="hud"><span id="hudPhase">FASE 1</span><span id="hudTimer">00:00</span><span id="hudProgress">0/4</span></div><div id="player"></div><div class="prompt" id="prompt">PRESSIONE E PARA INTERAGIR</div><div class="modal" id="challengeModal"><div class="modalBox"><div id="qTitle" style="color:#58a6ff;font-weight:700;margin-bottom:.5rem"></div><div id="qText"></div><div id="opts"></div><div id="qResult" style="margin-top:.5rem;font-weight:700"></div></div></div><div class="modal" id="resultModal"><div class="modalBox"><h2 id="resTitle">FASE CONCLUÍDA!</h2><div id="resStars" style="font-size:1.8rem;color:#d29922"></div><div id="resScores"></div><button class="optBtn" style="background:#238636" onclick="goMap()">MAPA</button><button class="optBtn" id="nextBtn" onclick="nextPhase()">PRÓXIMA FASE</button></div></div></div><div id="mapScreen" class="screen"><h1 style="color:#58a6ff">MAPA DO LABORATÓRIO</h1><div id="mapBtns" style="display:flex;flex-direction:column;gap:.6rem"></div><div class="keys"><span>WASD</span> mover <span>E</span> interagir <span>ESC</span> mapa</div></div><div class="keys"><span>W A S D</span> mover <span>E</span> interagir</div></div>
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>LabCore | Laboratório de Ciências</title>
+
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+
+            --bg: #050b16;
+            --panel: #0b1628;
+            --panel-light: #10233d;
+
+            --cyan: #38d9ff;
+            --cyan-dark: #087ea4;
+
+            --blue: #2387d9;
+
+            --green: #36e39a;
+            --yellow: #ffd166;
+            --red: #ff5c70;
+
+            --text: #e8f7ff;
+            --muted: #7f9db3;
+
+            --border: #1c4968;
+
+        }
+
+        html,
+        body {
+
+            width: 100%;
+            min-height: 100%;
+
+        }
+
+        body {
+
+            font-family:
+                "Segoe UI",
+                Arial,
+                sans-serif;
+
+            background:
+                radial-gradient(
+                    circle at center,
+                    #0c2038 0%,
+                    #050b16 65%
+                );
+
+            color: var(--text);
+
+            min-height: 100vh;
+
+            overflow-x: hidden;
+
+        }
+
+        button,
+        a {
+
+            font-family: inherit;
+
+        }
+
+        button {
+
+            cursor: pointer;
+
+        }
+
+
+        /* =========================================================
+           HEADER
+        ========================================================= */
+
+        header {
+
+            height: 64px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            padding: 0 24px;
+
+            background:
+                linear-gradient(
+                    180deg,
+                    #0d1c31,
+                    #081321
+                );
+
+            border-bottom:
+                2px solid var(--border);
+
+            position: relative;
+
+            z-index: 100;
+
+        }
+
+
+        .logo {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 12px;
+
+        }
+
+
+        .logo-symbol {
+
+            width: 38px;
+            height: 38px;
+
+            display: flex;
+
+            align-items: center;
+            justify-content: center;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #123d5d,
+                    #071321
+                );
+
+            border:
+                2px solid var(--cyan);
+
+            color: var(--cyan);
+
+            font-size: 20px;
+
+            box-shadow:
+                0 0 12px
+                rgba(56, 217, 255, .25);
+
+        }
+
+
+        .logo-text {
+
+            font-size: 22px;
+
+            font-weight: 900;
+
+            letter-spacing: 3px;
+
+            color: var(--cyan);
+
+            text-shadow:
+                0 0 8px
+                rgba(56, 217, 255, .45);
+
+        }
+
+
+        .user-area {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 10px;
+
+        }
+
+
+        .user-name {
+
+            color: var(--muted);
+
+            font-size: 14px;
+
+        }
+
+
+        .header-score {
+
+            padding: 7px 12px;
+
+            border:
+                1px solid var(--border);
+
+            background: #081321;
+
+            color: var(--yellow);
+
+            font-weight: 800;
+
+            border-radius: 6px;
+
+        }
+
+
+        .header-button {
+
+            color: var(--text);
+
+            text-decoration: none;
+
+            padding: 7px 12px;
+
+            border:
+                1px solid var(--border);
+
+            background: var(--panel);
+
+            border-radius: 6px;
+
+            transition: .2s;
+
+        }
+
+
+        .header-button:hover {
+
+            border-color: var(--cyan);
+
+            color: var(--cyan);
+
+        }
+
+
+        /* =========================================================
+           STAGE
+        ========================================================= */
+
+        #stage {
+
+            min-height:
+                calc(100vh - 64px);
+
+            display: flex;
+
+            flex-direction: column;
+
+            align-items: center;
+
+            justify-content: center;
+
+            padding: 24px;
+
+            gap: 12px;
+
+        }
+
+
+        #gameWrap {
+
+            position: relative;
+
+            width: min(960px, 95vw);
+
+            aspect-ratio: 16 / 9;
+
+            max-height: 650px;
+
+            overflow: hidden;
+
+            border:
+                3px solid #1c6086;
+
+            border-radius: 10px;
+
+            background: #06111f;
+
+            box-shadow:
+                0 0 30px
+                rgba(0, 0, 0, .7),
+
+                inset 0 0 30px
+                rgba(0, 174, 255, .08);
+
+        }
+
+
+        /* =========================================================
+           BACKGROUND IMAGE
+        ========================================================= */
+
+        #laboratoryBackground {
+
+            position: absolute;
+
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+
+            object-fit: cover;
+
+            image-rendering: pixelated;
+
+            opacity: .88;
+
+            z-index: 0;
+
+        }
+
+
+        #backgroundOverlay {
+
+            position: absolute;
+
+            inset: 0;
+
+            background:
+                linear-gradient(
+                    180deg,
+                    rgba(3, 12, 24, .12),
+                    rgba(3, 10, 20, .48)
+                );
+
+            z-index: 1;
+
+            pointer-events: none;
+
+        }
+
+
+        /* =========================================================
+           HUD
+        ========================================================= */
+
+        .hud {
+
+            position: absolute;
+
+            top: 12px;
+            left: 12px;
+            right: 12px;
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 10px;
+
+            z-index: 20;
+
+        }
+
+
+        .hud-item {
+
+            padding: 7px 12px;
+
+            background:
+                rgba(3, 12, 24, .88);
+
+            border:
+                1px solid var(--border);
+
+            border-radius: 5px;
+
+            font-size: 13px;
+
+            font-weight: 800;
+
+            box-shadow:
+                0 3px 10px
+                rgba(0, 0, 0, .35);
+
+        }
+
+
+        .hud-phase {
+
+            color: var(--cyan);
+
+        }
+
+
+        .hud-score {
+
+            color: var(--yellow);
+
+        }
+
+
+        .hud-progress {
+
+            color: var(--green);
+
+        }
+
+
+        .hud-timer {
+
+            color: #bdeeff;
+
+            margin-left: auto;
+
+        }
+
+
+        /* =========================================================
+           PLAYER
+        ========================================================= */
+
+        #player {
+
+            position: absolute;
+
+            width: 28px;
+            height: 34px;
+
+            background:
+                linear-gradient(
+                    90deg,
+                    #274a6c,
+                    #6bdcff,
+                    #274a6c
+                );
+
+            border:
+                2px solid #081321;
+
+            box-shadow:
+                0 0 10px
+                rgba(56, 217, 255, .45);
+
+            z-index: 12;
+
+            transition:
+                left .03s linear,
+                top .03s linear;
+
+        }
+
+
+        #player::before {
+
+            content: "";
+
+            position: absolute;
+
+            left: 4px;
+            right: 4px;
+
+            top: -8px;
+
+            height: 9px;
+
+            background: #e5f7ff;
+
+            border:
+                2px solid #081321;
+
+        }
+
+
+        #player::after {
+
+            content: "";
+
+            position: absolute;
+
+            left: 5px;
+            right: 5px;
+
+            bottom: 4px;
+
+            height: 4px;
+
+            background: #06111f;
+
+        }
+
+
+        /* =========================================================
+           OBJECTS
+        ========================================================= */
+
+        .obj {
+
+            position: absolute;
+
+            width: 64px;
+            height: 64px;
+
+            display: flex;
+
+            align-items: center;
+            justify-content: center;
+
+            border:
+                2px solid var(--cyan);
+
+            background:
+                rgba(5, 20, 35, .82);
+
+            border-radius: 8px;
+
+            font-size: 30px;
+
+            z-index: 10;
+
+            box-shadow:
+                0 0 14px
+                rgba(56, 217, 255, .18);
+
+            transition:
+                transform .15s,
+                border-color .15s,
+                background .15s;
+
+        }
+
+
+        .obj:hover {
+
+            transform: scale(1.05);
+
+            border-color: #fff;
+
+        }
+
+
+        .obj.done {
+
+            border-color: var(--green);
+
+            background:
+                rgba(24, 88, 64, .7);
+
+            opacity: .62;
+
+        }
+
+
+        .obj-label {
+
+            position: absolute;
+
+            bottom: -22px;
+
+            left: 50%;
+
+            transform:
+                translateX(-50%);
+
+            white-space: nowrap;
+
+            font-size: 10px;
+
+            color: #d9f5ff;
+
+            background:
+                rgba(0, 0, 0, .72);
+
+            padding: 3px 6px;
+
+            border-radius: 3px;
+
+        }
+
+
+        /* =========================================================
+           PROMPT
+        ========================================================= */
+
+        #prompt {
+
+            position: absolute;
+
+            left: 50%;
+
+            bottom: 22px;
+
+            transform:
+                translateX(-50%);
+
+            padding: 8px 15px;
+
+            background:
+                rgba(3, 12, 24, .94);
+
+            border:
+                1px solid var(--cyan);
+
+            color: var(--cyan);
+
+            border-radius: 5px;
+
+            font-size: 12px;
+
+            font-weight: 800;
+
+            z-index: 25;
+
+            display: none;
+
+        }
+
+
+        /* =========================================================
+           SCREENS
+        ========================================================= */
+
+        .screen {
+
+            position: absolute;
+
+            inset: 0;
+
+            display: flex;
+
+            flex-direction: column;
+
+            align-items: center;
+
+            justify-content: center;
+
+            background:
+                radial-gradient(
+                    circle at center,
+                    rgba(10, 36, 61, .96),
+                    rgba(3, 9, 17, .98)
+                );
+
+            z-index: 50;
+
+            padding: 30px;
+
+            text-align: center;
+
+        }
+
+
+        .screen.hidden {
+
+            display: none;
+
+        }
+
+
+        .screen-title {
+
+            font-size:
+                clamp(32px, 5vw, 58px);
+
+            font-weight: 900;
+
+            letter-spacing: 7px;
+
+            color: var(--cyan);
+
+            text-shadow:
+                0 0 8px #087ea4,
+                0 0 20px rgba(56, 217, 255, .25);
+
+        }
+
+
+        .screen-subtitle {
+
+            margin-top: 8px;
+
+            color: #9ec3d8;
+
+            font-size: 14px;
+
+            letter-spacing: 2px;
+
+        }
+
+
+        .menu-buttons {
+
+            width: min(380px, 90%);
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 10px;
+
+            margin-top: 30px;
+
+        }
+
+
+        .game-button {
+
+            border:
+                2px solid var(--border);
+
+            background:
+                linear-gradient(
+                    180deg,
+                    #102b47,
+                    #091727
+                );
+
+            color: var(--text);
+
+            padding: 13px 20px;
+
+            border-radius: 6px;
+
+            font-weight: 900;
+
+            letter-spacing: 1px;
+
+            transition: .2s;
+
+        }
+
+
+        .game-button:hover {
+
+            border-color: var(--cyan);
+
+            color: var(--cyan);
+
+            transform:
+                translateY(-2px);
+
+            box-shadow:
+                0 0 16px
+                rgba(56, 217, 255, .16);
+
+        }
+
+
+        .game-button.primary {
+
+            background:
+                linear-gradient(
+                    180deg,
+                    #087ea4,
+                    #07526d
+                );
+
+            border-color: var(--cyan);
+
+            color: #fff;
+
+        }
+
+
+        .controls {
+
+            margin-top: 24px;
+
+            color: var(--muted);
+
+            font-size: 12px;
+
+        }
+
+
+        .key {
+
+            display: inline-block;
+
+            padding: 3px 7px;
+
+            background: #101c2b;
+
+            border:
+                1px solid #31506a;
+
+            border-radius: 4px;
+
+            color: var(--cyan);
+
+            margin: 0 2px;
+
+        }
+
+
+        /* =========================================================
+           MAP
+        ========================================================= */
+
+        #mapScreen {
+
+            display: none;
+
+        }
+
+
+        .map-container {
+
+            width: min(700px, 95%);
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(5, 1fr);
+
+            gap: 12px;
+
+            margin-top: 25px;
+
+        }
+
+
+        .phase-button {
+
+            min-height: 120px;
+
+            padding: 15px;
+
+            border:
+                2px solid var(--border);
+
+            background:
+                linear-gradient(
+                    180deg,
+                    #10243b,
+                    #091321
+                );
+
+            color: var(--text);
+
+            border-radius: 8px;
+
+            display: flex;
+
+            flex-direction: column;
+
+            align-items: center;
+
+            justify-content: center;
+
+            gap: 6px;
+
+            transition: .2s;
+
+        }
+
+
+        .phase-button:hover:not(:disabled) {
+
+            transform:
+                translateY(-4px);
+
+            border-color:
+                var(--cyan);
+
+        }
+
+
+        .phase-button:disabled {
+
+            opacity: .38;
+
+            cursor: not-allowed;
+
+        }
+
+
+        .phase-number {
+
+            font-size: 25px;
+
+            color: var(--cyan);
+
+            font-weight: 900;
+
+        }
+
+
+        .phase-name {
+
+            font-size: 11px;
+
+            font-weight: 800;
+
+        }
+
+
+        .stars {
+
+            color: var(--yellow);
+
+            letter-spacing: 2px;
+
+        }
+
+
+        /* =========================================================
+           MODAL
+        ========================================================= */
+
+        .modal {
+
+            position: absolute;
+
+            inset: 0;
+
+            display: none;
+
+            align-items: center;
+
+            justify-content: center;
+
+            padding: 20px;
+
+            background:
+                rgba(2, 7, 14, .88);
+
+            z-index: 80;
+
+        }
+
+
+        .modal-box {
+
+            width: min(500px, 95%);
+
+            background:
+                linear-gradient(
+                    180deg,
+                    #11243a,
+                    #081321
+                );
+
+            border:
+                2px solid var(--cyan);
+
+            border-radius: 10px;
+
+            padding: 25px;
+
+            box-shadow:
+                0 0 30px
+                rgba(56, 217, 255, .12);
+
+        }
+
+
+        .modal-title {
+
+            color: var(--cyan);
+
+            font-size: 18px;
+
+            font-weight: 900;
+
+            margin-bottom: 12px;
+
+        }
+
+
+        .question {
+
+            font-size: 17px;
+
+            line-height: 1.5;
+
+            margin-bottom: 15px;
+
+        }
+
+
+        .options {
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 8px;
+
+        }
+
+
+        .option-button {
+
+            text-align: left;
+
+            padding: 11px 13px;
+
+            background: #0b1726;
+
+            border:
+                1px solid #254661;
+
+            color: var(--text);
+
+            border-radius: 5px;
+
+            transition: .15s;
+
+        }
+
+
+        .option-button:hover {
+
+            border-color: var(--cyan);
+
+            background: #10283e;
+
+        }
+
+
+        .result {
+
+            min-height: 25px;
+
+            margin-top: 12px;
+
+            font-weight: 900;
+
+        }
+
+
+        .correct {
+
+            color: var(--green);
+
+        }
+
+
+        .wrong {
+
+            color: var(--red);
+
+        }
+
+
+        /* =========================================================
+           RESULT
+        ========================================================= */
+
+        .result-stars {
+
+            font-size: 42px;
+
+            color: var(--yellow);
+
+            letter-spacing: 6px;
+
+            margin: 15px 0;
+
+        }
+
+
+        .result-score {
+
+            font-size: 20px;
+
+            font-weight: 900;
+
+            color: var(--cyan);
+
+            margin-bottom: 20px;
+
+        }
+
+
+        /* =========================================================
+           MOBILE
+        ========================================================= */
+
+        @media (max-width: 700px) {
+
+            header {
+
+                padding: 0 12px;
+
+            }
+
+            .user-name {
+
+                display: none;
+
+            }
+
+            .map-container {
+
+                grid-template-columns:
+                    repeat(2, 1fr);
+
+            }
+
+            .hud {
+
+                gap: 5px;
+
+            }
+
+            .hud-item {
+
+                font-size: 10px;
+
+                padding: 5px 7px;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<header>
+
+    <div class="logo">
+
+        <div class="logo-symbol">
+            ⚗
+        </div>
+
+        <div class="logo-text">
+            LABCORE
+        </div>
+
+    </div>
+
+
+    <div class="user-area">
+
+        {% if user.is_authenticated %}
+
+            <span class="user-name">
+                {{ user.username }}
+            </span>
+
+            <span class="header-score">
+                <span id="headerScore">0</span> XP
+            </span>
+
+            <a
+                href="/profile/"
+                class="header-button"
+            >
+                PERFIL
+            </a>
+
+            <a
+                href="/logout/"
+                class="header-button"
+            >
+                SAIR
+            </a>
+
+        {% else %}
+
+            <a
+                href="/login/"
+                class="header-button"
+            >
+                ENTRAR
+            </a>
+
+            <a
+                href="/register/"
+                class="header-button"
+            >
+                CADASTRAR
+            </a>
+
+        {% endif %}
+
+    </div>
+
+</header>
+
+
+<div id="stage">
+
+
+    <div id="gameWrap">
+
+
+        <!-- =====================================================
+             IMAGEM PRINCIPAL DO LABORATÓRIO
+        ====================================================== -->
+
+        <img
+            id="laboratoryBackground"
+            src="{% static 'assets/Laborat#U00f3rio Sci-Fi Neon em Pixel Art.png' %}"
+            alt="Laboratório LabCore"
+        >
+
+        <div id="backgroundOverlay"></div>
+
+
+        <!-- =====================================================
+             HUD
+        ====================================================== -->
+
+        <div class="hud">
+
+            <div
+                class="hud-item hud-phase"
+                id="hudPhase"
+            >
+                FASE 1
+            </div>
+
+            <div
+                class="hud-item hud-score"
+            >
+                ⭐ <span id="hudScore">0</span>
+            </div>
+
+            <div
+                class="hud-item hud-progress"
+                id="hudProgress"
+            >
+                0/0
+            </div>
+
+            <div
+                class="hud-item hud-timer"
+                id="hudTimer"
+            >
+                00:00
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             PLAYER
+        ====================================================== -->
+
+        <div id="player"></div>
+
+
+        <!-- =====================================================
+             PROMPT
+        ====================================================== -->
+
+        <div id="prompt">
+            PRESSIONE <b>E</b> PARA INTERAGIR
+        </div>
+
+
+        <!-- =====================================================
+             MAPA
+        ====================================================== -->
+
+        <div
+            id="mapScreen"
+            class="screen"
+        >
+
+            <div class="screen-title">
+                LABCORE
+            </div>
+
+            <div class="screen-subtitle">
+                MAPA DE MISSÕES CIENTÍFICAS
+            </div>
+
+
+            <div
+                id="mapBtns"
+                class="map-container"
+            >
+            </div>
+
+
+            <div class="controls">
+
+                <span class="key">W A S D</span>
+                mover
+
+                <span class="key">E</span>
+                interagir
+
+                <span class="key">ESC</span>
+                mapa
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             MODAL DE DESAFIO
+        ====================================================== -->
+
+        <div
+            id="challengeModal"
+            class="modal"
+        >
+
+            <div class="modal-box">
+
+                <div
+                    id="qTitle"
+                    class="modal-title"
+                >
+                </div>
+
+
+                <div
+                    id="qText"
+                    class="question"
+                >
+                </div>
+
+
+                <div
+                    id="opts"
+                    class="options"
+                >
+                </div>
+
+
+                <div
+                    id="qResult"
+                    class="result"
+                >
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             RESULTADO
+        ====================================================== -->
+
+        <div
+            id="resultModal"
+            class="modal"
+        >
+
+            <div class="modal-box">
+
+                <div
+                    id="resTitle"
+                    class="modal-title"
+                >
+                    FASE CONCLUÍDA!
+                </div>
+
+
+                <div
+                    id="resStars"
+                    class="result-stars"
+                >
+                </div>
+
+
+                <div
+                    id="resScores"
+                    class="result-score"
+                >
+                </div>
+
+
+                <button
+                    class="game-button primary"
+                    style="width:100%;margin-bottom:8px"
+                    onclick="goMap()"
+                >
+                    MAPA
+                </button>
+
+
+                <button
+                    id="nextBtn"
+                    class="game-button"
+                    style="width:100%"
+                    onclick="nextPhase()"
+                >
+                    PRÓXIMA FASE
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             MENU PRINCIPAL
+        ====================================================== -->
+
+        <div
+            id="mainMenu"
+            class="screen"
+        >
+
+            <div class="screen-title">
+                LABCORE
+            </div>
+
+            <div class="screen-subtitle">
+                LABORATÓRIO INTERATIVO DE CIÊNCIAS
+            </div>
+
+
+            <div class="menu-buttons">
+
+                <button
+                    class="game-button primary"
+                    onclick="showMap()"
+                >
+                    ▶ INICIAR MISSÃO
+                </button>
+
+
+                <button
+                    class="game-button"
+                    onclick="showMap()"
+                >
+                    🗺 MAPA DE FASES
+                </button>
+
+
+                <button
+                    class="game-button"
+                    onclick="showLeaderboard()"
+                >
+                    🏆 RANKING
+                </button>
+
+
+                {% if user.is_authenticated %}
+
+                    <a
+                        class="game-button"
+                        href="/profile/"
+                        style="text-decoration:none;text-align:center"
+                    >
+                        👤 MEU PERFIL
+                    </a>
+
+                {% endif %}
+
+            </div>
+
+
+            <div class="controls">
+
+                Explore o laboratório, resolva os desafios
+                e domine as ciências.
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             RANKING
+        ====================================================== -->
+
+        <div
+            id="leaderboardScreen"
+            class="screen"
+            style="display:none"
+        >
+
+            <div class="screen-title">
+                RANKING
+            </div>
+
+            <div class="screen-subtitle">
+                MELHORES PESQUISADORES
+            </div>
+
+
+            <div
+                id="leaderboardList"
+                style="
+                    width:min(500px,90%);
+                    margin-top:20px;
+                "
+            >
+            </div>
+
+
+            <button
+                class="game-button"
+                style="
+                    width:300px;
+                    margin-top:20px;
+                "
+                onclick="backToMenu()"
+            >
+                VOLTAR
+            </button>
+
+        </div>
+
+
+    </div>
+
+
+    <div class="controls">
+
+        <span class="key">W A S D</span>
+        mover
+
+        <span class="key">E</span>
+        interagir
+
+        <span class="key">ESC</span>
+        voltar ao mapa
+
+    </div>
+
+
+</div>
+
+
 <script>
-const CHALLENGES={1:[{id:'microscope',icon:'🔬',x:120,y:80,q:'Qual equipamento observa células?',opts:['MICROSCÓPIO','TERMÔMETRO','BALANÇA','BÉQUER'],a:0},{id:'computer',icon:'💻',x:260,y:80,q:'Qual processa dados?',opts:['MICROSCÓPIO','COMPUTADOR','CENTRÍFUGA','PIPETA'],a:1},{id:'centrifuge',icon:'🧪',x:400,y:80,q:'Qual separa por densidade?',opts:['MICROSCÓPIO','TERMÔMETRO','CENTRÍFUGA','BÉQUER'],a:2},{id:'balance',icon:'⚖️',x:520,y:80,q:'Qual mede massa?',opts:['MICROSCÓPIO','TERMÔMETRO','BALANÇA','BÉQUER'],a:2}],2:[{id:'h2o',icon:'💧',x:120,y:80,q:'Elementos para H2O?',opts:['H+H+O','H+O+O','C+H+O','Na+Cl'],a:0},{id:'nacl',icon:'🧂',x:280,y:80,q:'Elementos do NaCl?',opts:['Na+Cl','H+Cl','Na+O','C+Cl'],a:0},{id:'co2',icon:'🌫️',x:440,y:80,q:'Composição CO2?',opts:['C+O','C+O+O','C+H+O','C+C+O'],a:1}],3:[{id:'ohm',icon:'⚡',x:120,y:80,q:'V=10V I=2A => R?',opts:['2 Ω','5 Ω','10 Ω','20 Ω'],a:1},{id:'serie',icon:'🔋',x:300,y:80,q:'3x5Ω em série?',opts:['5 Ω','10 Ω','15 Ω','20 Ω'],a:2},{id:'paralelo',icon:'🔌',x:480,y:80,q:'2x10Ω em paralelo?',opts:['20 Ω','10 Ω','5 Ω','2.5 Ω'],a:2}],4:[{id:'nucleo',icon:'🧬',x:120,y:80,q:'Controla a célula?',opts:['NÚCLEO','MITOCÔNDRIA','CLOROPLASTO','MEMBRANA'],a:0},{id:'mito',icon:'🔴',x:300,y:80,q:'Produz ATP?',opts:['NÚCLEO','MITOCÔNDRIA','CLOROPLASTO','RIBOSSOMO'],a:1},{id:'cloro',icon:'🌿',x:480,y:80,q:'Fotossíntese?',opts:['NÚCLEO','MITOCÔNDRIA','CLOROPLASTO','VACÚOLO'],a:2}],5:[{id:'f1',icon:'🔬',x:140,y:80,q:'FINAL 1/4 - Observa células?',opts:['MICROSCÓPIO','TERMÔMETRO','BALANÇA','BÉQUER'],a:0},{id:'f2',icon:'💧',x:320,y:80,q:'FINAL 2/4 - H2O?',opts:['H+H+O','H+O+O','C+H+O','Na+Cl'],a:0},{id:'f3',icon:'⚡',x:140,y:180,q:'FINAL 3/4 - V=12V I=3A R?',opts:['3 Ω','4 Ω','6 Ω','9 Ω'],a:1},{id:'f4',icon:'🌿',x:320,y:180,q:'FINAL 4/4 - Fotossíntese?',opts:['NÚCLEO','MITOCÔNDRIA','CLOROPLASTO','RIBOSSOMO'],a:2}]};
-const NAMES={1:'EQUIPAMENTOS',2:'QUÍMICA',3:'FÍSICA',4:'BIOLOGIA',5:'DESAFIO FINAL'};
-let state={phase:1,score:0,unlocked:[1],stars:{},correct:0,mistakes:0}, player={x:100,y:280,w:20,h:28}, keys={}, near=null, t0=0, timer=null, phaseDone=[];
-const wrap=document.getElementById('gameWrap'), pEl=document.getElementById('player'), prompt=document.getElementById('prompt');
-const modal=document.getElementById('challengeModal'), qTitle=document.getElementById('qTitle'), qText=document.getElementById('qText'), opts=document.getElementById('opts'), qResult=document.getElementById('qResult');
-const resModal=document.getElementById('resultModal');
-function loadState(){ {% if user.is_authenticated %}fetch('/api/load/').then(r=>r.json()).then(d=>{state.score=d.total_score||0;state.unlocked=d.unlocked_phases||[1];state.phase=d.current_phase||1;state.stars=d.phase_stars||{};state.correct=d.correct_answers||0;state.mistakes=d.mistakes||0;updateHUD();renderMap();});{% else %}let s=JSON.parse(localStorage.getItem('labcore')||'null');if(s)state=s;updateHUD();renderMap();{% endif %} }
-function saveState(c=false){localStorage.setItem('labcore',JSON.stringify(state));{% if user.is_authenticated %}fetch('/api/save/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},body:JSON.stringify({total_score:state.score,current_phase:state.phase,unlocked_phases:state.unlocked,phase_stars:state.stars,correct_answers:state.correct,mistakes:state.mistakes,game_completed:c})});{% endif %}}
-function getCookie(n){let v=null;document.cookie.split(';').forEach(c=>{c=c.trim();if(c.startsWith(n+'='))v=decodeURIComponent(c.substring(n.length+1))});return v}
-function renderMap(){document.getElementById('mapScreen').style.display='flex';const c=document.getElementById('mapBtns');c.innerHTML='';for(let i=1;i<=5;i++){const b=document.createElement('button');b.className='mapBtn';const u=state.unlocked.includes(i),d=state.stars[i];b.textContent=`${i} - ${NAMES[i]}${d?' ★'.repeat(d):u?' ▶':' 🔒'}`;if(d)b.classList.add('done');b.disabled=!u;b.onclick=()=>startPhase(i);c.appendChild(b)}wrap.querySelectorAll('.wall,.obj').forEach(e=>e.remove());}
-function goMap(){resModal.style.display='none';modal.style.display='none';clearInterval(timer);renderMap();}
-function startPhase(id){state.phase=id;document.getElementById('mapScreen').style.display='none';t0=Date.now();phaseDone=[];clearInterval(timer);timer=setInterval(()=>{let s=Math.floor((Date.now()-t0)/1000);document.getElementById('hudTimer').textContent=`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`},500);document.getElementById('hudPhase').textContent=`FASE ${id} - ${NAMES[id]}`;player.x=100;player.y=280;buildLab(id);updateHUD();}
-function buildLab(id){wrap.querySelectorAll('.wall,.obj').forEach(e=>e.remove());[[0,0,640,16],[0,344,640,16],[0,0,16,360],[624,0,16,360],[150,60,16,100],[300,60,16,100],[450,60,16,100]].forEach(([x,y,w,h])=>{let d=document.createElement('div');d.className='wall';d.style.left=x+'px';d.style.top=y+'px';d.style.width=w+'px';d.style.height=h+'px';wrap.appendChild(d)});CHALLENGES[id].forEach(ch=>{let d=document.createElement('div');d.className='obj';d.style.left=ch.x+'px';d.style.top=ch.y+'px';d.textContent=ch.icon;d.dataset.id=ch.id;if(phaseDone.includes(ch.id))d.classList.add('done');wrap.appendChild(d);});}
-function walls(){return [...document.querySelectorAll('.wall')].map(e=>({x:parseInt(e.style.left),y:parseInt(e.style.top),w:parseInt(e.style.width),h:parseInt(e.style.height)}))}
-function rectColl(ax,ay,aw,ah,b){return ax<b.x+b.w && ax+aw>b.x && ay<b.y+b.h && ay+ah>b.y}
-document.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key==='Escape')goMap();if(e.key.toLowerCase()==='e'&&near)openChallenge(near)});
-document.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
-function openChallenge(id){const ch=CHALLENGES[state.phase].find(c=>c.id===id);if(!ch||phaseDone.includes(id))return;modal.style.display='flex';qTitle.textContent=`FASE ${state.phase} - DESAFIO`;qText.textContent=ch.q;qResult.textContent='';opts.innerHTML='';ch.opts.forEach((o,i)=>{let b=document.createElement('button');b.className='optBtn';b.textContent=String.fromCharCode(65+i)+') '+o;b.onclick=()=>{const ok=i===ch.a;if(ok){state.score+=100;state.correct++;qResult.textContent='CORRETO! +100';qResult.style.color='#2ea043';phaseDone.push(id);document.querySelector(`[data-id="${id}"]`)?.classList.add('done');}else{state.mistakes++;qResult.textContent='INCORRETO!';qResult.style.color='#f85149';}updateHUD();saveState();setTimeout(()=>{modal.style.display='none';if(phaseDone.length>=CHALLENGES[state.phase].length)finishPhase();},900);};opts.appendChild(b);});}
-function finishPhase(){clearInterval(timer);let secs=Math.floor((Date.now()-t0)/1000),bonus=secs<60?30:secs<120?15:0;state.score+=bonus;let stars=1;if(phaseDone.length===CHALLENGES[state.phase].length)stars++;if(secs<90)stars++;stars=Math.min(3,stars);state.stars[state.phase]=Math.max(state.stars[state.phase]||0,stars);if(state.phase<5&&!state.unlocked.includes(state.phase+1))state.unlocked.push(state.phase+1);saveState(state.phase===5);document.getElementById('resTitle').textContent=state.phase===5?'LABORATÓRIO RESTAURADO!':'FASE CONCLUÍDA!';document.getElementById('resStars').textContent='★'.repeat(stars)+'☆'.repeat(3-stars);document.getElementById('resScores').innerHTML=`Pontos: ${state.score}<br>Bônus tempo: ${bonus}`;document.getElementById('nextBtn').textContent=state.phase===5?'JOGAR NOVAMENTE':'PRÓXIMA FASE';resModal.style.display='flex';updateHUD();}
-function nextPhase(){resModal.style.display='none';if(state.phase===5){state={phase:1,score:0,unlocked:[1],stars:{},correct:0,mistakes:0};saveState()}else if(state.phase<5){startPhase(state.phase+1);return}goMap();}
-function updateHUD(){document.getElementById('hudScore').textContent=state.score;document.getElementById('hudProgress').textContent=phaseDone.length+'/'+(CHALLENGES[state.phase]?.length||0);}
-function loop(){if(document.getElementById('mapScreen').style.display!=='none'||modal.style.display==='flex'||resModal.style.display==='flex'){requestAnimationFrame(loop);return}let nx=player.x,ny=player.y,s=2.2;if(keys['w']||keys['arrowup'])ny-=s;if(keys['s']||keys['arrowdown'])ny+=s;if(keys['a']||keys['arrowleft'])nx-=s;if(keys['d']||keys['arrowright'])nx+=s;let blocked=false;for(let w of walls())if(rectColl(nx,ny,player.w,player.h,w))blocked=true;if(!blocked){player.x=Math.max(16,Math.min(620,nx));player.y=Math.max(16,Math.min(330,ny));}pEl.style.left=player.x+'px';pEl.style.top=player.y+'px';near=null;let best=Infinity;document.querySelectorAll('.obj').forEach(o=>{if(o.classList.contains('done'))return;let ox=parseInt(o.style.left)+24,oy=parseInt(o.style.top)+24;let d=Math.hypot(player.x+10-ox,player.y+14-oy);if(d<48&&d<best){best=d;near=o.dataset.id}});prompt.style.display=near?'block':'none';requestAnimationFrame(loop);}
-loadState();loop();
-</script></body></html>
+
+
+/* ================================================================
+   DESAFIOS
+================================================================ */
+
+const CHALLENGES = {
+
+    1: [
+
+        {
+            id: "microscope",
+            icon: "🔬",
+            label: "Microscópio",
+            x: 100,
+            y: 100,
+
+            q: "Qual equipamento é utilizado para observar estruturas muito pequenas, como células?",
+
+            opts: [
+                "MICROSCÓPIO",
+                "TERMÔMETRO",
+                "BALANÇA",
+                "BÉQUER"
+            ],
+
+            a: 0
+        },
+
+
+        {
+            id: "computer",
+            icon: "💻",
+            label: "Computador",
+            x: 280,
+            y: 100,
+
+            q: "Qual equipamento é utilizado para processar e analisar dados?",
+
+            opts: [
+                "MICROSCÓPIO",
+                "COMPUTADOR",
+                "CENTRÍFUGA",
+                "PIPETA"
+            ],
+
+            a: 1
+        },
+
+
+        {
+            id: "centrifuge",
+            icon: "🧪",
+            label: "Centrífuga",
+            x: 460,
+            y: 100,
+
+            q: "Qual equipamento pode separar componentes de uma mistura pela diferença de densidade?",
+
+            opts: [
+                "MICROSCÓPIO",
+                "TERMÔMETRO",
+                "CENTRÍFUGA",
+                "BÉQUER"
+            ],
+
+            a: 2
+        },
+
+
+        {
+            id: "balance",
+            icon: "⚖️",
+            label: "Balança",
+            x: 370,
+            y: 230,
+
+            q: "Qual equipamento é utilizado para medir massa?",
+
+            opts: [
+                "MICROSCÓPIO",
+                "TERMÔMETRO",
+                "BALANÇA",
+                "BÉQUER"
+            ],
+
+            a: 2
+        }
+
+    ],
+
+
+    2: [
+
+        {
+            id: "h2o",
+            icon: "💧",
+            label: "Água",
+            x: 100,
+            y: 100,
+
+            q: "Quais elementos formam a molécula H₂O?",
+
+            opts: [
+                "H + H + O",
+                "H + O + O",
+                "C + H + O",
+                "Na + Cl"
+            ],
+
+            a: 0
+        },
+
+
+        {
+            id: "nacl",
+            icon: "🧂",
+            label: "Cloreto de sódio",
+            x: 280,
+            y: 100,
+
+            q: "Quais elementos formam o NaCl?",
+
+            opts: [
+                "Na + Cl",
+                "H + Cl",
+                "Na + O",
+                "C + Cl"
+            ],
+
+            a: 0
+        },
+
+
+        {
+            id: "co2",
+            icon: "🌫️",
+            label: "Dióxido de carbono",
+            x: 460,
+            y: 100,
+
+            q: "Qual é a composição do CO₂?",
+
+            opts: [
+                "C + O",
+                "C + O + O",
+                "C + H + O",
+                "C + C + O"
+            ],
+
+            a: 1
+        }
+
+    ],
+
+
+    3: [
+
+        {
+            id: "ohm",
+            icon: "⚡",
+            label: "Lei de Ohm",
+            x: 100,
+            y: 100,
+
+            q: "Se V = 10 V e I = 2 A, qual é a resistência?",
+
+            opts: [
+                "2 Ω",
+                "5 Ω",
+                "10 Ω",
+                "20 Ω"
+            ],
+
+            a: 1
+        },
+
+
+        {
+            id: "serie",
+            icon: "🔋",
+            label: "Circuito",
+            x: 280,
+            y: 100,
+
+            q: "Três resistores de 5 Ω estão ligados em série. Qual é a resistência equivalente?",
+
+            opts: [
+                "5 Ω",
+                "10 Ω",
+                "15 Ω",
+                "20 Ω"
+            ],
+
+            a: 2
+        },
+
+
+        {
+            id: "paralelo",
+            icon: "🔌",
+            label: "Paralelo",
+            x: 460,
+            y: 100,
+
+            q: "Dois resistores de 10 Ω estão ligados em paralelo. Qual é a resistência equivalente?",
+
+            opts: [
+                "20 Ω",
+                "10 Ω",
+                "5 Ω",
+                "2,5 Ω"
+            ],
+
+            a: 2
+        }
+
+    ],
+
+
+    4: [
+
+        {
+            id: "nucleo",
+            icon: "🧬",
+            label: "Núcleo",
+            x: 100,
+            y: 100,
+
+            q: "Qual estrutura celular contém o material genético e controla diversas atividades da célula?",
+
+            opts: [
+                "NÚCLEO",
+                "MITOCÔNDRIA",
+                "CLOROPLASTO",
+                "MEMBRANA"
+            ],
+
+            a: 0
+        },
+
+
+        {
+            id: "mito",
+            icon: "🔴",
+            label: "Mitocôndria",
+            x: 280,
+            y: 100,
+
+            q: "Qual organela está diretamente relacionada à produção de ATP?",
+
+            opts: [
+                "NÚCLEO",
+                "MITOCÔNDRIA",
+                "CLOROPLASTO",
+                "RIBOSSOMO"
+            ],
+
+            a: 1
+        },
+
+
+        {
+            id: "cloro",
+            icon: "🌿",
+            label: "Cloroplasto",
+            x: 460,
+            y: 100,
+
+            q: "Em células vegetais, qual organela está relacionada à fotossíntese?",
+
+            opts: [
+                "NÚCLEO",
+                "MITOCÔNDRIA",
+                "CLOROPLASTO",
+                "VACÚOLO"
+            ],
+
+            a: 2
+        }
+
+    ],
+
+
+    5: [
+
+        {
+            id: "f1",
+            icon: "🔬",
+            label: "Desafio 1",
+            x: 130,
+            y: 90,
+
+            q: "DESAFIO FINAL — Qual equipamento permite observar células?",
+
+            opts: [
+                "MICROSCÓPIO",
+                "TERMÔMETRO",
+                "BALANÇA",
+                "BÉQUER"
+            ],
+
+            a: 0
+        },
+
+
+        {
+            id: "f2",
+            icon: "💧",
+            label: "Desafio 2",
+            x: 390,
+            y: 90,
+
+            q: "DESAFIO FINAL — Qual é a composição da água?",
+
+            opts: [
+                "H + H + O",
+                "H + O + O",
+                "C + H + O",
+                "Na + Cl"
+            ],
+
+            a: 0
+        },
+
+
+        {
+            id: "f3",
+            icon: "⚡",
+            label: "Desafio 3",
+            x: 130,
+            y: 220,
+
+            q: "DESAFIO FINAL — Se V = 12 V e I = 3 A, qual é R?",
+
+            opts: [
+                "3 Ω",
+                "4 Ω",
+                "6 Ω",
+                "9 Ω"
+            ],
+
+            a: 1
+        },
+
+
+        {
+            id: "f4",
+            icon: "🌿",
+            label: "Desafio 4",
+            x: 390,
+            y: 220,
+
+            q: "DESAFIO FINAL — Qual organela realiza a fotossíntese?",
+
+            opts: [
+                "NÚCLEO",
+                "MITOCÔNDRIA",
+                "CLOROPLASTO",
+                "RIBOSSOMO"
+            ],
+
+            a: 2
+        }
+
+    ]
+
+};
+
+
+/* ================================================================
+   NOMES DAS FASES
+================================================================ */
+
+const PHASE_NAMES = {
+
+    1: "EQUIPAMENTOS",
+
+    2: "QUÍMICA",
+
+    3: "FÍSICA",
+
+    4: "BIOLOGIA",
+
+    5: "DESAFIO FINAL"
+
+};
+
+
+/* ================================================================
+   ESTADO
+================================================================ */
+
+let state = {
+
+    phase: 1,
+
+    score: 0,
+
+    unlocked: [1],
+
+    stars: {},
+
+    correct: 0,
+
+    mistakes: 0
+
+};
+
+
+let player = {
+
+    x: 80,
+
+    y: 280,
+
+    width: 28,
+
+    height: 34
+
+};
+
+
+let keys = {};
+
+let near = null;
+
+let phaseDone = [];
+
+let phaseStart = 0;
+
+let timer = null;
+
+
+/* ================================================================
+   ELEMENTOS
+================================================================ */
+
+const wrap =
+    document.getElementById("gameWrap");
+
+const playerElement =
+    document.getElementById("player");
+
+const prompt =
+    document.getElementById("prompt");
+
+const mapScreen =
+    document.getElementById("mapScreen");
+
+const mainMenu =
+    document.getElementById("mainMenu");
+
+const leaderboardScreen =
+    document.getElementById("leaderboardScreen");
+
+const challengeModal =
+    document.getElementById("challengeModal");
+
+const resultModal =
+    document.getElementById("resultModal");
+
+
+/* ================================================================
+   SALVAR
+================================================================ */
+
+function saveLocalState() {
+
+    localStorage.setItem(
+        "labcore",
+        JSON.stringify(state)
+    );
+
+}
+
+
+/* ================================================================
+   CARREGAR
+================================================================ */
+
+function loadState() {
+
+    try {
+
+        const saved =
+            localStorage.getItem("labcore");
+
+        if (saved) {
+
+            const data =
+                JSON.parse(saved);
+
+            state = {
+                ...state,
+                ...data
+            };
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Erro ao carregar progresso:",
+            error
+        );
+
+    }
+
+
+    updateHUD();
+
+    renderMap();
+
+}
+
+
+/* ================================================================
+   SALVAR NO DJANGO
+================================================================ */
+
+async function saveServerProgress(
+    completed = false
+) {
+
+    {% if user.is_authenticated %}
+
+    try {
+
+        await fetch(
+            "/api/save/",
+            {
+
+                method: "POST",
+
+                headers: {
+
+                    "Content-Type":
+                        "application/json",
+
+                    "X-CSRFToken":
+                        getCookie("csrftoken")
+
+                },
+
+                body: JSON.stringify({
+
+                    total_score:
+                        state.score,
+
+                    current_phase:
+                        state.phase,
+
+                    unlocked_phases:
+                        state.unlocked,
+
+                    phase_stars:
+                        state.stars,
+
+                    correct_answers:
+                        state.correct,
+
+                    mistakes:
+                        state.mistakes,
+
+                    game_completed:
+                        completed
+
+                })
+
+            }
+
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Erro ao salvar:",
+            error
+        );
+
+    }
+
+    {% endif %}
+
+}
+
+
+/* ================================================================
+   CSRF
+================================================================ */
+
+function getCookie(name) {
+
+    let cookieValue = null;
+
+    if (document.cookie) {
+
+        const cookies =
+            document.cookie.split(";");
+
+        for (
+            let cookie of cookies
+        ) {
+
+            cookie =
+                cookie.trim();
+
+            if (
+                cookie.startsWith(
+                    name + "="
+                )
+            ) {
+
+                cookieValue =
+                    decodeURIComponent(
+                        cookie.substring(
+                            name.length + 1
+                        )
+                    );
+
+                break;
+
+            }
+
+        }
+
+    }
+
+    return cookieValue;
+
+}
+
+
+/* ================================================================
+   MENU
+================================================================ */
+
+function showMap() {
+
+    mainMenu.style.display =
+        "none";
+
+    leaderboardScreen.style.display =
+        "none";
+
+    mapScreen.style.display =
+        "flex";
+
+    renderMap();
+
+}
+
+
+function backToMenu() {
+
+    mapScreen.style.display =
+        "none";
+
+    leaderboardScreen.style.display =
+        "none";
+
+    mainMenu.style.display =
+        "flex";
+
+}
+
+
+function showLeaderboard() {
+
+    mainMenu.style.display =
+        "none";
+
+    mapScreen.style.display =
+        "none";
+
+    leaderboardScreen.style.display =
+        "flex";
+
+    loadLeaderboard();
+
+}
+
+
+/* ================================================================
+   MAPA
+================================================================ */
+
+function renderMap() {
+
+    const container =
+        document.getElementById(
+            "mapBtns"
+        );
+
+    container.innerHTML = "";
+
+
+    for (
+        let i = 1;
+        i <= 5;
+        i++
+    ) {
+
+        const button =
+            document.createElement(
+                "button"
+            );
+
+        button.className =
+            "phase-button";
+
+
+        const unlocked =
+            state.unlocked.includes(i);
+
+        const stars =
+            state.stars[i] || 0;
+
+
+        button.disabled =
+            !unlocked;
+
+
+        button.innerHTML = `
+
+            <div class="phase-number">
+                ${i}
+            </div>
+
+            <div class="phase-name">
+                ${PHASE_NAMES[i]}
+            </div>
+
+            <div class="stars">
+                ${
+                    "★".repeat(stars)
+                }${
+                    "☆".repeat(3 - stars)
+                }
+            </div>
+
+            <div style="
+                font-size:10px;
+                color:#6f8fa4;
+            ">
+                ${
+                    unlocked
+                        ? "DISPONÍVEL"
+                        : "BLOQUEADA"
+                }
+            </div>
+
+        `;
+
+
+        if (unlocked) {
+
+            button.onclick =
+                () => startPhase(i);
+
+        }
+
+
+        container.appendChild(
+            button
+        );
+
+    }
+
+}
+
+
+/* ================================================================
+   INICIAR FASE
+================================================================ */
+
+function startPhase(id) {
+
+    state.phase = id;
+
+    phaseDone = [];
+
+    player.x = 70;
+    player.y = 280;
+
+
+    mapScreen.style.display =
+        "none";
+
+    mainMenu.style.display =
+        "none";
+
+    leaderboardScreen.style.display =
+        "none";
+
+
+    phaseStart =
+        Date.now();
+
+
+    clearInterval(timer);
+
+
+    timer =
+        setInterval(
+            updateTimer,
+            500
+        );
+
+
+    document.getElementById(
+        "hudPhase"
+    ).textContent =
+        `FASE ${id} — ${PHASE_NAMES[id]}`;
+
+
+    buildLaboratory(id);
+
+    updateHUD();
+
+}
+
+
+/* ================================================================
+   TIMER
+================================================================ */
+
+function updateTimer() {
+
+    const elapsed =
+        Math.floor(
+            (Date.now() - phaseStart) /
+            1000
+        );
+
+
+    const minutes =
+        Math.floor(
+            elapsed / 60
+        );
+
+
+    const seconds =
+        elapsed % 60;
+
+
+    document.getElementById(
+        "hudTimer"
+    ).textContent =
+
+        String(minutes)
+            .padStart(2, "0")
+
+        +
+
+        ":"
+
+        +
+
+        String(seconds)
+            .padStart(2, "0");
+
+}
+
+
+/* ================================================================
+   CONSTRUIR LABORATÓRIO
+================================================================ */
+
+function buildLaboratory(id) {
+
+    wrap
+        .querySelectorAll(
+            ".wall, .obj"
+        )
+        .forEach(
+            element =>
+                element.remove()
+        );
+
+
+    const walls = [
+
+        [0, 0, 960, 18],
+
+        [0, 502, 960, 18],
+
+        [0, 0, 18, 520],
+
+        [942, 0, 18, 520],
+
+        [200, 70, 18, 110],
+
+        [470, 70, 18, 110],
+
+        [740, 70, 18, 110]
+
+    ];
+
+
+    walls.forEach(
+        ([x, y, width, height]) => {
+
+            const wall =
+                document.createElement(
+                    "div"
+                );
+
+            wall.className =
+                "wall";
+
+
+            wall.style.position =
+                "absolute";
+
+            wall.style.left =
+                `${x}px`;
+
+            wall.style.top =
+                `${y}px`;
+
+            wall.style.width =
+                `${width}px`;
+
+            wall.style.height =
+                `${height}px`;
+
+            wall.style.background =
+                "transparent";
+
+            wall.style.zIndex =
+                "5";
+
+
+            wrap.appendChild(
+                wall
+            );
+
+        }
+    );
+
+
+    CHALLENGES[id]
+        .forEach(
+            challenge => {
+
+                const object =
+                    document.createElement(
+                        "div"
+                    );
+
+                object.className =
+                    "obj";
+
+
+                object.dataset.id =
+                    challenge.id;
+
+
+                object.style.left =
+                    `${challenge.x}px`;
+
+                object.style.top =
+                    `${challenge.y}px`;
+
+
+                object.innerHTML = `
+
+                    <span>
+                        ${challenge.icon}
+                    </span>
+
+                    <span class="obj-label">
+                        ${challenge.label}
+                    </span>
+
+                `;
+
+
+                if (
+                    phaseDone.includes(
+                        challenge.id
+                    )
+                ) {
+
+                    object.classList.add(
+                        "done"
+                    );
+
+                }
+
+
+                wrap.appendChild(
+                    object
+                );
+
+            }
+        );
+
+}
+
+
+/* ================================================================
+   COLISÃO
+================================================================ */
+
+function collision(
+    ax,
+    ay,
+    aw,
+    ah,
+    b
+) {
+
+    return (
+
+        ax < b.x + b.w &&
+
+        ax + aw > b.x &&
+
+        ay < b.y + b.h &&
+
+        ay + ah > b.y
+
+    );
+
+}
+
+
+function getWalls() {
+
+    return [
+        ...document.querySelectorAll(
+            ".wall"
+        )
+    ].map(
+        element => ({
+
+            x:
+                parseInt(
+                    element.style.left
+                ),
+
+            y:
+                parseInt(
+                    element.style.top
+                ),
+
+            w:
+                parseInt(
+                    element.style.width
+                ),
+
+            h:
+                parseInt(
+                    element.style.height
+                )
+
+        })
+    );
+
+}
+
+
+/* ================================================================
+   MOVIMENTO
+================================================================ */
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        const key =
+            event.key.toLowerCase();
+
+        keys[key] = true;
+
+
+        if (
+            key === "e" &&
+            near
+        ) {
+
+            openChallenge(
+                near
+            );
+
+        }
+
+
+        if (
+            key === "escape"
+        ) {
+
+            showMap();
+
+        }
+
+    }
+);
+
+
+document.addEventListener(
+    "keyup",
+    event => {
+
+        keys[
+            event.key.toLowerCase()
+        ] = false;
+
+    }
+);
+
+
+/* ================================================================
+   DESAFIO
+================================================================ */
+
+function openChallenge(id) {
+
+    const challenge =
+        CHALLENGES[
+            state.phase
+        ].find(
+            item =>
+                item.id === id
+        );
+
+
+    if (
+        !challenge ||
+        phaseDone.includes(id)
+    ) {
+
+        return;
+
+    }
+
+
+    document.getElementById(
+        "qTitle"
+    ).textContent =
+
+        `LABCORE — ${PHASE_NAMES[state.phase]}`;
+
+
+    document.getElementById(
+        "qText"
+    ).textContent =
+        challenge.q;
+
+
+    const options =
+        document.getElementById(
+            "opts"
+        );
+
+
+    const result =
+        document.getElementById(
+            "qResult"
+        );
+
+
+    options.innerHTML = "";
+
+    result.textContent = "";
+
+
+    challenge.opts.forEach(
+        (option, index) => {
+
+            const button =
+                document.createElement(
+                    "button"
+                );
+
+
+            button.className =
+                "option-button";
+
+
+            button.textContent =
+
+                `${String.fromCharCode(
+                    65 + index
+                )}) ${option}`;
+
+
+            button.onclick =
+                () => answerChallenge(
+                    challenge,
+                    index
+                );
+
+
+            options.appendChild(
+                button
+            );
+
+        }
+    );
+
+
+    challengeModal.style.display =
+        "flex";
+
+}
+
+
+/* ================================================================
+   RESPOSTA
+================================================================ */
+
+function answerChallenge(
+    challenge,
+    answer
+) {
+
+    const result =
+        document.getElementById(
+            "qResult"
+        );
+
+
+    if (
+        answer === challenge.a
+    ) {
+
+        state.score += 100;
+
+        state.correct++;
+
+
+        result.textContent =
+            "✓ RESPOSTA CORRETA! +100 XP";
+
+
+        result.className =
+            "result correct";
+
+
+        if (
+            !phaseDone.includes(
+                challenge.id
+            )
+        ) {
+
+            phaseDone.push(
+                challenge.id
+            );
+
+        }
+
+
+        const object =
+            document.querySelector(
+                `[data-id="${challenge.id}"]`
+            );
+
+
+        if (object) {
+
+            object.classList.add(
+                "done"
+            );
+
+        }
+
+
+        updateHUD();
+
+        saveLocalState();
+
+        saveServerProgress();
+
+
+        setTimeout(
+            () => {
+
+                challengeModal.style.display =
+                    "none";
+
+
+                if (
+                    phaseDone.length >=
+                    CHALLENGES[
+                        state.phase
+                    ].length
+                ) {
+
+                    finishPhase();
+
+                }
+
+            },
+            850
+        );
+
+
+    } else {
+
+        state.mistakes++;
+
+
+        result.textContent =
+            "✕ RESPOSTA INCORRETA";
+
+
+        result.className =
+            "result wrong";
+
+
+        saveLocalState();
+
+        saveServerProgress();
+
+    }
+
+}
+
+
+/* ================================================================
+   FINALIZAR FASE
+================================================================ */
+
+function finishPhase() {
+
+    clearInterval(timer);
+
+
+    const seconds =
+        Math.floor(
+            (Date.now() - phaseStart) /
+            1000
+        );
+
+
+    let bonus = 0;
+
+
+    if (seconds <= 60) {
+
+        bonus = 50;
+
+    } else if (
+        seconds <= 120
+    ) {
+
+        bonus = 25;
+
+    }
+
+
+    state.score += bonus;
+
+
+    let stars = 1;
+
+
+    if (
+        phaseDone.length ===
+        CHALLENGES[
+            state.phase
+        ].length
+    ) {
+
+        stars++;
+
+    }
+
+
+    if (seconds <= 90) {
+
+        stars++;
+
+    }
+
+
+    stars =
+        Math.min(
+            3,
+            stars
+        );
+
+
+    state.stars[
+        state.phase
+    ] =
+        Math.max(
+            state.stars[
+                state.phase
+            ] || 0,
+            stars
+        );
+
+
+    if (
+        state.phase < 5
+    ) {
+
+        if (
+            !state.unlocked.includes(
+                state.phase + 1
+            )
+        ) {
+
+            state.unlocked.push(
+                state.phase + 1
+            );
+
+        }
+
+    }
+
+
+    saveLocalState();
+
+    saveServerProgress(
+        state.phase === 5
+    );
+
+
+    document.getElementById(
+        "resTitle"
+    ).textContent =
+
+        state.phase === 5
+
+            ? "LABORATÓRIO CONCLUÍDO!"
+
+            : "FASE CONCLUÍDA!";
+
+
+    document.getElementById(
+        "resStars"
+    ).textContent =
+
+        "★".repeat(stars)
+
+        +
+
+        "☆".repeat(
+            3 - stars
+        );
+
+
+    document.getElementById(
+        "resScores"
+    ).innerHTML = `
+
+        PONTUAÇÃO TOTAL:
+        ${state.score}
+
+        <br><br>
+
+        BÔNUS DE TEMPO:
+        +${bonus} XP
+
+    `;
+
+
+    document.getElementById(
+        "nextBtn"
+    ).textContent =
+
+        state.phase === 5
+
+            ? "NOVO JOGO"
+
+            : "PRÓXIMA FASE";
+
+
+    resultModal.style.display =
+        "flex";
+
+
+    updateHUD();
+
+}
+
+
+/* ================================================================
+   PRÓXIMA FASE
+================================================================ */
+
+function nextPhase() {
+
+    resultModal.style.display =
+        "none";
+
+
+    if (
+        state.phase === 5
+    ) {
+
+        state = {
+
+            phase: 1,
+
+            score: 0,
+
+            unlocked: [1],
+
+            stars: {},
+
+            correct: 0,
+
+            mistakes: 0
+
+        };
+
+
+        saveLocalState();
+
+        showMap();
+
+        return;
+
+    }
+
+
+    startPhase(
+        state.phase + 1
+    );
+
+}
+
+
+/* ================================================================
+   MAPA APÓS RESULTADO
+================================================================ */
+
+function goMap() {
+
+    resultModal.style.display =
+        "none";
+
+    challengeModal.style.display =
+        "none";
+
+    clearInterval(timer);
+
+    showMap();
+
+}
+
+
+/* ================================================================
+   HUD
+================================================================ */
+
+function updateHUD() {
+
+    document.getElementById(
+        "hudScore"
+    ).textContent =
+        state.score;
+
+
+    document.getElementById(
+        "headerScore"
+    ).textContent =
+        state.score;
+
+
+    document.getElementById(
+        "hudProgress"
+    ).textContent =
+
+        `${phaseDone.length}/${
+            CHALLENGES[
+                state.phase
+            ]
+                ? CHALLENGES[
+                    state.phase
+                ].length
+                : 0
+        }`;
+
+}
+
+
+/* ================================================================
+   RANKING
+================================================================ */
+
+async function loadLeaderboard() {
+
+    const container =
+        document.getElementById(
+            "leaderboardList"
+        );
+
+
+    container.innerHTML = `
+
+        <div style="
+            color:#7f9db3;
+            text-align:center;
+            padding:20px;
+        ">
+            Carregando ranking...
+        </div>
+
+    `;
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/leaderboard/"
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (
+            !data.leaderboard ||
+            data.leaderboard.length === 0
+        ) {
+
+            container.innerHTML = `
+
+                <div style="
+                    color:#7f9db3;
+                    text-align:center;
+                    padding:20px;
+                ">
+                    Ainda não existem jogadores
+                    no ranking.
+                </div>
+
+            `;
+
+            return;
+
+        }
+
+
+        container.innerHTML = "";
+
+
+        data.leaderboard.forEach(
+            (entry, index) => {
+
+                const row =
+                    document.createElement(
+                        "div"
+                    );
+
+
+                row.style.display =
+                    "flex";
+
+                row.style.justifyContent =
+                    "space-between";
+
+                row.style.alignItems =
+                    "center";
+
+                row.style.padding =
+                    "12px";
+
+                row.style.marginBottom =
+                    "6px";
+
+                row.style.background =
+                    "#0b1726";
+
+                row.style.border =
+                    "1px solid #1c4968";
+
+                row.style.borderRadius =
+                    "5px";
+
+
+                row.innerHTML = `
+
+                    <span>
+                        <b style="
+                            color:#38d9ff;
+                        ">
+                            #${index + 1}
+                        </b>
+
+                        &nbsp;
+
+                        ${entry.username}
+                    </span>
+
+                    <b style="
+                        color:#ffd166;
+                    ">
+                        ${entry.score} XP
+                    </b>
+
+                `;
+
+
+                container.appendChild(
+                    row
+                );
+
+            }
+        );
+
+
+    } catch (error) {
+
+        container.innerHTML = `
+
+            <div style="
+                color:#ff5c70;
+                text-align:center;
+                padding:20px;
+            ">
+                Não foi possível carregar
+                o ranking.
+            </div>
+
+        `;
+
+    }
+
+}
+
+
+/* ================================================================
+   LOOP DO JOGO
+================================================================ */
+
+function gameLoop() {
+
+    const mapVisible =
+        mapScreen.style.display !==
+        "none";
+
+
+    const modalVisible =
+        challengeModal.style.display ===
+        "flex";
+
+
+    const resultVisible =
+        resultModal.style.display ===
+        "flex";
+
+
+    const menuVisible =
+        mainMenu.style.display !==
+        "none";
+
+
+    const rankingVisible =
+        leaderboardScreen.style.display !==
+        "none";
+
+
+    if (
+        mapVisible ||
+        modalVisible ||
+        resultVisible ||
+        menuVisible ||
+        rankingVisible
+    ) {
+
+        requestAnimationFrame(
+            gameLoop
+        );
+
+        return;
+
+    }
+
+
+    let nextX =
+        player.x;
+
+    let nextY =
+        player.y;
+
+
+    const speed = 3;
+
+
+    if (
+        keys["w"] ||
+        keys["arrowup"]
+    ) {
+
+        nextY -= speed;
+
+    }
+
+
+    if (
+        keys["s"] ||
+        keys["arrowdown"]
+    ) {
+
+        nextY += speed;
+
+    }
+
+
+    if (
+        keys["a"] ||
+        keys["arrowleft"]
+    ) {
+
+        nextX -= speed;
+
+    }
+
+
+    if (
+        keys["d"] ||
+        keys["arrowright"]
+    ) {
+
+        nextX += speed;
+
+    }
+
+
+    let blocked = false;
+
+
+    for (
+        const wall of getWalls()
+    ) {
+
+        if (
+            collision(
+                nextX,
+                nextY,
+                player.width,
+                player.height,
+                wall
+            )
+        ) {
+
+            blocked = true;
+
+            break;
+
+        }
+
+    }
+
+
+    if (!blocked) {
+
+        player.x =
+            Math.max(
+                20,
+                Math.min(
+                    910,
+                    nextX
+                )
+            );
+
+
+        player.y =
+            Math.max(
+                25,
+                Math.min(
+                    455,
+                    nextY
+                )
+            );
+
+    }
+
+
+    playerElement.style.left =
+        `${player.x}px`;
+
+    playerElement.style.top =
+        `${player.y}px`;
+
+
+    near = null;
+
+
+    let bestDistance =
+        Infinity;
+
+
+    document
+        .querySelectorAll(
+            ".obj"
+        )
+        .forEach(
+            object => {
+
+                if (
+                    object.classList.contains(
+                        "done"
+                    )
+                ) {
+
+                    return;
+
+                }
+
+
+                const objectX =
+                    parseInt(
+                        object.style.left
+                    ) + 32;
+
+
+                const objectY =
+                    parseInt(
+                        object.style.top
+                    ) + 32;
+
+
+                const distance =
+                    Math.hypot(
+                        player.x + 14 -
+                            objectX,
+
+                        player.y + 17 -
+                            objectY
+                    );
+
+
+                if (
+                    distance < 65 &&
+                    distance < bestDistance
+                ) {
+
+                    bestDistance =
+                        distance;
+
+                    near =
+                        object.dataset.id;
+
+                }
+
+            }
+        );
+
+
+    prompt.style.display =
+        near
+            ? "block"
+            : "none";
+
+
+    requestAnimationFrame(
+        gameLoop
+    );
+
+}
+
+
+/* ================================================================
+   INICIALIZAÇÃO
+================================================================ */
+
+loadState();
+
+gameLoop();
+
+</script>
+
+
+</body>
+
+</html>
