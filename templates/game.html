@@ -1,4 +1,3 @@
-
 {% load static %}
 <!doctype html>
 <html lang="pt-br">
@@ -29,6 +28,12 @@
     </div>
 </header>
 
+<div id="assetWarning" class="asset-warning" role="status" hidden>
+    Algumas imagens originais não estão nesta pasta. O jogo continua funcionando com desenhos de reserva.
+    Para usar as capturas do GitHub, copie <code>static/assets</code> do repositório original e atualize a página.
+    <button type="button" onclick="this.parentElement.hidden=true" aria-label="Fechar aviso">×</button>
+</div>
+
 <main id="app"
       data-assets="{% static 'assets/' %}"
       data-user="{{ user.pk|default:'guest' }}"
@@ -38,6 +43,7 @@
             <img id="background" src="{% static 'assets/Laboratório Sci-Fi Neon em Pixel Art.png' %}" alt="">
             <div class="scene-tint"></div>
             <img id="sceneArt" alt="" hidden>
+            <div class="lab-floor" aria-hidden="true"></div>
             <div id="objects"></div>
             <img id="player" src="{% static 'assets/Captura de tela 2026-08-31 083221.png' %}"
                  alt="Pesquisador do LabCore" hidden>
@@ -60,12 +66,13 @@
                     <button id="mapButton" type="button">🗺 Mapa de fases</button>
                     <button id="rankingButton" type="button">🏆 Ranking</button>
                 </div>
-                <p class="hint">Explore o laboratório e resolva desafios de Equipamentos, Química, Física e Biologia.</p>
+                <p class="hint">Explore o laboratório, toque nos equipamentos e resolva missões de Equipamentos, Química, Física e Biologia.</p>
+                <div class="menu-badges" aria-label="Recursos do jogo"><span>🔬 Equipamentos interativos</span><span>🧬 5 missões</span><span>🏆 Pontuação e estrelas</span></div>
             </section>
 
             <section id="mapScreen" class="screen" aria-label="Mapa de fases" hidden>
                 <h2>MAPA DE MISSÕES</h2>
-                <p class="subtitle">Escolha uma fase desbloqueada</p>
+                <p class="subtitle">Cada experimento concluído desbloqueia a próxima missão</p>
                 <div id="phaseCards" class="phase-cards"></div>
                 <button id="mapBack" class="secondary" type="button">← Menu principal</button>
             </section>
@@ -101,7 +108,7 @@
         <button id="touchInteract" class="interact" type="button">Interagir</button>
         <button id="touchMap" class="interact" type="button">Mapa</button>
     </div>
-    <p class="keyboard-help">Mover: <kbd>W A S D</kbd> ou <kbd>← ↑ ↓ →</kbd>
+    <p class="keyboard-help">Clique nas imagens para abrir os desafios · Mover: <kbd>W A S D</kbd> ou <kbd>← ↑ ↓ →</kbd>
         · Interagir: <kbd>E</kbd> · Voltar ao mapa: <kbd>ESC</kbd></p>
 </main>
 

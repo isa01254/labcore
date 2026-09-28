@@ -1,7 +1,9 @@
-#!/usr/bin/env python
-import os, sys
-def main():
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'labcore_web.settings')
+#!/usr/bin/env python3
+"""Comandos administrativos do Django. Para jogar, execute main.py."""
+import os
+import sys
+
+if __name__ == "__main__":
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "labcore_web.settings")
     from django.core.management import execute_from_command_line
     execute_from_command_line(sys.argv)
-if __name__ == '__main__': main()

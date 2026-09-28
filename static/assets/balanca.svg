@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="140" viewBox="0 0 160 140" role="img" aria-label="Balança de laboratório">
+<defs><linearGradient id="metal" x1="0" x2="1"><stop stop-color="#7eb3d4"/><stop offset=".5" stop-color="#e4f6ff"/><stop offset="1" stop-color="#47799d"/></linearGradient></defs>
+<g fill="none" stroke="#153650" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+<rect x="54" y="116" width="54" height="10" rx="4" fill="url(#metal)"/>
+<path d="M80 114V20m-41 24h82" stroke="url(#metal)" stroke-width="7"/>
+<circle cx="80" cy="20" r="8" fill="#37d3ff"/>
+<path d="M39 44 20 89m19-45 19 45m63-45-19 45m19-45 19 45" stroke="url(#metal)"/>
+<path d="M11 88q28 28 56 0ZM93 88q28 28 56 0Z" fill="#20b3d4" opacity=".9"/>
+<path d="M68 109h25" stroke="#3be5ef"/>
+</g></svg>

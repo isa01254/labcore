@@ -1,558 +1,208 @@
+"""Páginas, autenticação e persistência do jogo LabCore."""
 import json
 
-from django.contrib.auth import authenticate
-from django.contrib.auth import login
-from django.contrib.auth import logout
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
+from django.db import transaction
 from django.http import JsonResponse
-from django.shortcuts import redirect
-from django.shortcuts import render
-from django.views.decorators.http import require_GET
-from django.views.decorators.http import require_POST
+from django.shortcuts import redirect, render
+from django.views.decorators.http import require_GET, require_POST
 
-from .models import GameProgress
-from .models import LeaderboardEntry
+from .models import GameProgress, LeaderboardEntry
+
+PHASES = ((1, "Equipamentos"), (2, "Química"), (3, "Física"), (4, "Biologia"), (5, "Desafio final"))
 
 
 def game_view(request):
-    """
-    Página principal do LabCore.
-    """
+    return render(request, "game.html")
 
-    return render(
-        request,
-        "game.html",
+
+def initial_progress(user):
+    progress, _ = GameProgress.objects.get_or_create(
+        user=user,
+        defaults={"unlocked_phases": [1], "phase_scores": {}, "phase_stars": {}, "phase_times": {}},
     )
+    return progress
+
+
+def valid_int(value, maximum=10_000_000):
+    # Não converte float para int; evita strings ou objetos malformados.
+    if isinstance(value, bool):
+        raise ValueError("Número inválido")
+    if isinstance(value, int) or (isinstance(value, str) and value.isascii() and value.isdigit()):
+        number = int(value)
+        if 0 <= number <= maximum:
+            return number
+    raise ValueError("Número fora do intervalo permitido")
+
+
+def clean_phases(value):
+    if not isinstance(value, list):
+        raise ValueError("Lista de fases inválida")
+    phases = {1}
+    for item in value:
+        phase = valid_int(item, 5)
+        if phase < 1:
+            raise ValueError("Fase inválida")
+        phases.add(phase)
+    return sorted(phases)
+
+
+def clean_phase_dict(raw, *, star=False, time=False):
+    if not isinstance(raw, dict):
+        raise ValueError("Dados de fase inválidos")
+    output = {}
+    for key, value in raw.items():
+        if not isinstance(key, str) or key not in ("1", "2", "3", "4", "5"):
+            raise ValueError("Identificador de fase inválido")
+        if star or time:
+            output[key] = valid_int(value, 3 if star else 1_000_000)
+        else:
+            if not isinstance(value, (dict, int)) or isinstance(value, bool):
+                raise ValueError("Pontuação por fase inválida")
+            if isinstance(value, dict):
+                if len(json.dumps(value, ensure_ascii=False)) > 4000:
+                    raise ValueError("Dados de fase muito extensos")
+                # O jogo mantém a relação de perguntas concluídas e pontos por fase.
+                output[key] = value
+            else:
+                output[key] = valid_int(value)
+    return output
 
 
 @login_required
 @require_POST
 def save_progress(request):
-    """
-    Salva o progresso atual do jogador.
-    """
-
+    if len(request.body) > 30_000:
+        return JsonResponse({"ok": False, "error": "Dados muito extensos."}, status=413)
     try:
-        data = json.loads(
-            request.body.decode("utf-8")
-        )
+        data = json.loads(request.body.decode("utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError("O corpo deve ser um objeto JSON")
+        total_score = valid_int(data.get("total_score", 0))
+        current_phase = valid_int(data.get("current_phase", 1), 5)
+        if current_phase < 1:
+            raise ValueError("Fase inválida")
+        unlocked = clean_phases(data.get("unlocked_phases", [1]))
+        stars = clean_phase_dict(data.get("phase_stars", {}), star=True)
+        times = clean_phase_dict(data.get("phase_times", {}), time=True)
+        scores = clean_phase_dict(data.get("phase_scores", {}))
+        correct = valid_int(data.get("correct_answers", 0))
+        mistakes = valid_int(data.get("mistakes", 0))
+        completed = data.get("game_completed") is True
+        if current_phase not in unlocked:
+            raise ValueError("A fase atual precisa estar desbloqueada")
+        if completed and not all(stars.get(str(phase), 0) >= 1 for phase in range(1, 6)):
+            raise ValueError("Conclua as cinco fases antes de registrar no ranking")
+    except (ValueError, TypeError, UnicodeDecodeError, json.JSONDecodeError):
+        return JsonResponse({"ok": False, "error": "Progresso inválido. Confira os dados enviados."}, status=400)
 
-    except (
-        json.JSONDecodeError,
-        UnicodeDecodeError,
-    ):
-        return JsonResponse(
-            {
-                "ok": False,
-                "error": "JSON inválido.",
-            },
-            status=400,
-        )
-
-    progress, created = (
-        GameProgress.objects.get_or_create(
-            user=request.user,
-            defaults={
-                "total_score": 0,
-                "current_phase": 1,
-                "unlocked_phases": [1],
-                "phase_scores": {},
-                "phase_stars": {},
-                "phase_times": {},
-                "correct_answers": 0,
-                "mistakes": 0,
-                "best_score": 0,
-            },
-        )
-    )
-
-    total_score = max(
-        0,
-        int(
-            data.get(
-                "total_score",
-                progress.total_score,
-            )
-        ),
-    )
-
-    current_phase = max(
-        1,
-        int(
-            data.get(
-                "current_phase",
-                progress.current_phase,
-            )
-        ),
-    )
-
-    unlocked_phases = data.get(
-        "unlocked_phases",
-        progress.unlocked_phases,
-    )
-
-    phase_scores = data.get(
-        "phase_scores",
-        progress.phase_scores,
-    )
-
-    phase_stars = data.get(
-        "phase_stars",
-        progress.phase_stars,
-    )
-
-    phase_times = data.get(
-        "phase_times",
-        progress.phase_times,
-    )
-
-    correct_answers = max(
-        0,
-        int(
-            data.get(
-                "correct_answers",
-                progress.correct_answers,
-            )
-        ),
-    )
-
-    mistakes = max(
-        0,
-        int(
-            data.get(
-                "mistakes",
-                progress.mistakes,
-            )
-        ),
-    )
-
-    if not isinstance(
-        unlocked_phases,
-        list,
-    ):
-        unlocked_phases = [1]
-
-    if 1 not in unlocked_phases:
-        unlocked_phases.insert(
-            0,
-            1,
-        )
-
-    unlocked_phases = sorted(
-        set(
-            int(phase)
-            for phase in unlocked_phases
-            if str(phase).isdigit()
-        )
-    )
-
-    if not isinstance(
-        phase_scores,
-        dict,
-    ):
-        phase_scores = {}
-
-    if not isinstance(
-        phase_stars,
-        dict,
-    ):
-        phase_stars = {}
-
-    if not isinstance(
-        phase_times,
-        dict,
-    ):
-        phase_times = {}
-
-    progress.total_score = (
-        total_score
-    )
-
-    progress.current_phase = (
-        current_phase
-    )
-
-    progress.unlocked_phases = (
-        unlocked_phases
-    )
-
-    progress.phase_scores = (
-        phase_scores
-    )
-
-    progress.phase_stars = (
-        phase_stars
-    )
-
-    progress.phase_times = (
-        phase_times
-    )
-
-    progress.correct_answers = (
-        correct_answers
-    )
-
-    progress.mistakes = (
-        mistakes
-    )
-
-    progress.best_score = max(
-        progress.best_score,
-        total_score,
-    )
-
-    progress.save()
-
-    game_completed = bool(
-        data.get(
-            "game_completed",
-            False,
-        )
-    )
-
-    leaderboard_created = False
-
-    if game_completed:
-
-        accuracy = (
-            progress.get_accuracy()
-        )
-
-        entry, created_entry = (
-            LeaderboardEntry.objects.update_or_create(
-                user=request.user,
-                defaults={
-                    "score": progress.total_score,
-                    "total_stars": (
-                        progress.get_total_stars()
-                    ),
-                    "accuracy": accuracy,
-                },
-            )
-        )
-
-        leaderboard_created = (
-            created_entry
-        )
-
-    return JsonResponse(
-        {
-            "ok": True,
-            "created": created,
-            "leaderboard_created": (
-                leaderboard_created
-            ),
-            "progress": {
-                "total_score": (
-                    progress.total_score
-                ),
-                "current_phase": (
-                    progress.current_phase
-                ),
-                "unlocked_phases": (
-                    progress.unlocked_phases
-                ),
-                "phase_scores": (
-                    progress.phase_scores
-                ),
-                "phase_stars": (
-                    progress.phase_stars
-                ),
-                "phase_times": (
-                    progress.phase_times
-                ),
-                "correct_answers": (
-                    progress.correct_answers
-                ),
-                "mistakes": (
-                    progress.mistakes
-                ),
-                "best_score": (
-                    progress.best_score
-                ),
-            },
-        },
-    )
+    with transaction.atomic():
+        progress = initial_progress(request.user)
+        # O melhor resultado nunca diminui ao reiniciar o jogo.
+        progress.best_score = max(progress.best_score, total_score)
+        progress.total_score = total_score
+        progress.current_phase = current_phase
+        progress.unlocked_phases = unlocked
+        progress.phase_scores = scores
+        progress.phase_stars = stars
+        progress.phase_times = times
+        progress.correct_answers = correct
+        progress.mistakes = mistakes
+        progress.save()
+        if completed:
+            entry = LeaderboardEntry.objects.filter(user=request.user).order_by("-score").first()
+            if entry is None:
+                LeaderboardEntry.objects.create(
+                    user=request.user, score=progress.best_score,
+                    total_stars=progress.get_total_stars(), accuracy=progress.get_accuracy(),
+                )
+            elif progress.best_score >= entry.score:
+                entry.score = progress.best_score
+                entry.total_stars = progress.get_total_stars()
+                entry.accuracy = progress.get_accuracy()
+                entry.save(update_fields=["score", "total_stars", "accuracy"])
+    return JsonResponse({"ok": True, "best_score": progress.best_score})
 
 
 @login_required
 @require_GET
 def load_progress(request):
-    """
-    Recupera o progresso salvo do jogador.
-    """
-
-    progress, created = (
-        GameProgress.objects.get_or_create(
-            user=request.user,
-            defaults={
-                "total_score": 0,
-                "current_phase": 1,
-                "unlocked_phases": [1],
-                "phase_scores": {},
-                "phase_stars": {},
-                "phase_times": {},
-                "correct_answers": 0,
-                "mistakes": 0,
-                "best_score": 0,
-            },
-        )
-    )
-
-    return JsonResponse(
-        {
-            "ok": True,
-            "created": created,
-            "total_score": (
-                progress.total_score
-            ),
-            "current_phase": (
-                progress.current_phase
-            ),
-            "unlocked_phases": (
-                progress.unlocked_phases
-            ),
-            "phase_scores": (
-                progress.phase_scores
-            ),
-            "phase_stars": (
-                progress.phase_stars
-            ),
-            "phase_times": (
-                progress.phase_times
-            ),
-            "correct_answers": (
-                progress.correct_answers
-            ),
-            "mistakes": (
-                progress.mistakes
-            ),
-            "best_score": (
-                progress.best_score
-            ),
-        }
-    )
+    progress = initial_progress(request.user)
+    return JsonResponse({
+        "ok": True,
+        "total_score": progress.total_score,
+        "current_phase": progress.current_phase,
+        "unlocked_phases": progress.unlocked_phases,
+        "phase_scores": progress.phase_scores,
+        "phase_stars": progress.phase_stars,
+        "phase_times": progress.phase_times,
+        "correct_answers": progress.correct_answers,
+        "mistakes": progress.mistakes,
+        "best_score": progress.best_score,
+    })
 
 
 @require_GET
 def leaderboard(request):
-    """
-    Retorna os melhores jogadores.
-
-    O ranking usa a melhor pontuação registrada
-    de cada usuário.
-    """
-
-    entries = (
-        LeaderboardEntry.objects
-        .select_related("user")
-        .order_by(
-            "-score",
-            "-total_stars",
-            "-accuracy",
-            "completed_at",
-        )[:20]
+    # Uma linha por usuário, inclusive se a base antiga tiver duplicatas.
+    entries = LeaderboardEntry.objects.select_related("user").order_by(
+        "-score", "-total_stars", "-accuracy", "completed_at"
     )
-
-    ranking = []
-
-    for position, entry in enumerate(
-        entries,
-        start=1,
-    ):
-
-        ranking.append(
-            {
-                "position": position,
-                "username": (
-                    entry.user.username
-                ),
-                "score": entry.score,
-                "total_stars": (
-                    entry.total_stars
-                ),
-                "accuracy": (
-                    round(
-                        entry.accuracy,
-                        2,
-                    )
-                ),
-            }
-        )
-
-    return JsonResponse(
-        {
-            "ok": True,
-            "leaderboard": ranking,
-        }
-    )
+    ranking, seen = [], set()
+    for entry in entries:
+        if entry.user_id in seen:
+            continue
+        seen.add(entry.user_id)
+        ranking.append({
+            "position": len(ranking) + 1,
+            "username": entry.user.username,
+            "score": entry.score,
+            "total_stars": entry.total_stars,
+            "accuracy": round(entry.accuracy, 2),
+        })
+        if len(ranking) == 20:
+            break
+    return JsonResponse({"ok": True, "leaderboard": ranking})
 
 
 def register_view(request):
-    """
-    Cadastro de novo jogador.
-    """
-
     if request.user.is_authenticated:
         return redirect("game")
-
-    if request.method == "POST":
-
-        form = UserCreationForm(
-            request.POST
-        )
-
-        if form.is_valid():
-
-            user = form.save()
-
-            login(
-                request,
-                user,
-            )
-
-            GameProgress.objects.get_or_create(
-                user=user,
-                defaults={
-                    "unlocked_phases": [1],
-                    "phase_scores": {},
-                    "phase_stars": {},
-                    "phase_times": {},
-                },
-            )
-
-            return redirect("game")
-
-    else:
-
-        form = UserCreationForm()
-
-    return render(
-        request,
-        "registration/register.html",
-        {
-            "form": form,
-        },
-    )
+    form = UserCreationForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        user = form.save()
+        login(request, user)
+        initial_progress(user)
+        return redirect("game")
+    return render(request, "registration/register.html", {"form": form})
 
 
 def login_view(request):
-    """
-    Login do jogador.
-    """
-
     if request.user.is_authenticated:
         return redirect("game")
-
     error = None
-
     if request.method == "POST":
-
-        username = (
-            request.POST.get(
-                "username",
-                "",
-            ).strip()
-        )
-
-        password = (
-            request.POST.get(
-                "password",
-                "",
-            )
-        )
-
-        user = authenticate(
-            request,
-            username=username,
-            password=password,
-        )
-
+        username = request.POST.get("username", "").strip()
+        password = request.POST.get("password", "")
+        user = authenticate(request, username=username, password=password)
         if user is not None:
-
-            login(
-                request,
-                user,
-            )
-
-            GameProgress.objects.get_or_create(
-                user=user,
-                defaults={
-                    "unlocked_phases": [1],
-                    "phase_scores": {},
-                    "phase_stars": {},
-                    "phase_times": {},
-                },
-            )
-
+            login(request, user)
+            initial_progress(user)
             return redirect("game")
-
-        error = (
-            "Usuário ou senha incorretos."
-        )
-
-    return render(
-        request,
-        "registration/login.html",
-        {
-            "error": error,
-        },
-    )
+        error = "Usuário ou senha incorretos."
+    return render(request, "registration/login.html", {"error": error})
 
 
 @login_required
 @require_POST
 def logout_view(request):
-    """
-    Encerra a sessão.
-    """
-
     logout(request)
-
     return redirect("game")
 
 
 @login_required
 @require_GET
 def profile_view(request):
-    """
-    Página do perfil do jogador.
-    """
-
-    progress = (
-        GameProgress.objects
-        .filter(
-            user=request.user
-        )
-        .first()
-    )
-
-    if progress is None:
-
-        progress = (
-            GameProgress.objects.create(
-                user=request.user,
-                unlocked_phases=[1],
-                phase_scores={},
-                phase_stars={},
-                phase_times={},
-            )
-        )
-
-    phases = [
-        (1, "Equipamentos"),
-        (2, "Química"),
-        (3, "Física"),
-        (4, "Biologia"),
-        (5, "Desafio Final"),
-    ]
-
-    return render(
-        request,
-        "profile.html",
-        {
-            "progress": progress,
-            "phases": phases,
-        },
-    )
+    return render(request, "profile.html", {"progress": initial_progress(request.user), "phases": PHASES})
