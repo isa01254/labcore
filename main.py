@@ -1,13 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-Ponto de entrada unico do LabCore.
+LabCore - inicialização principal do jogo.
 
 Uso:
-    python main.py                    # aplica migracoes e sobe o servidor
-    python main.py migrate            # so aplicas migracoes
+    python main.py
+    python main.py migrate
     python main.py createsuperuser
-    python main.py collectstatic
-    python main.py <qualquer comando do django>
+    python main.py check
 """
 
 import os
@@ -16,35 +15,37 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "labcore_web.settings")
 
-# Comandos que valem a pena rodar sozinhos antes do runserver.
-PRE_RUN = ("migrate",)
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "labcore_web.settings")
 
 
 def main() -> int:
     try:
-        import django
         from django.core.management import execute_from_command_line
     except ModuleNotFoundError as exc:
-        print("")
-        print("ERRO: dependencia faltando ->", exc.name)
-        print("")
-        print("Rode:")
-        print("    python -m pip install -r requirements.txt")
-        print("")
+        print(f"Dependência ausente: {exc.name}")
+        print("Instale com:")
+        print("python -m pip install -r requirements.txt")
         return 1
 
-    django.setup()
+    args = sys.argv[1:]
 
-    argv = sys.argv[1:]
+    # Se o usuário digitou algum comando do Django, executa normalmente
+    if args:
+        execute_from_command_line(["manage.py", *args])
+        return 0
 
-    if not argv:
-        argv = list(PRE_RUN) + ["runserver", "0.0.0.0:8000"]
-    elif argv[0] == "runserver" and "0.0.0.0:8000" not in argv:
-        argv.append("0.0.0.0:8000")
+    # Fluxo padrão: migrate -> check -> runserver
+    print("[LabCore] Atualizando o banco de dados...")
+    execute_from_command_line(["manage.py", "migrate", "--noinput"])
 
-    execute_from_command_line(["manage.py", *argv])
+    print("[LabCore] Verificando o projeto...")
+    execute_from_command_line(["manage.py", "check"])
+
+    print("[LabCore] Iniciando o jogo...")
+    print("Abra: http://127.0.0.1:8000")
+
+    execute_from_command_line(["manage.py", "runserver", "127.0.0.1:8000"])
     return 0
 
 
