@@ -1,0 +1,110 @@
+
+/* LABCORE - INTERFACE DAS 8 FASES */
+
+#mapScreen .hero.small {
+    height: 48px !important;
+    width: 65px !important;
+}
+
+#mapScreen {
+    gap: 7px;
+    padding: 12px 25px;
+}
+
+#mapScreen h2 {
+    font-size: 29px;
+    letter-spacing: 2px;
+}
+
+#mapScreen .phase-cards {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 9px;
+    margin: 7px 0;
+}
+
+#mapScreen .phase-card {
+    min-height: 147px;
+    padding: 7px 5px;
+    gap: 4px;
+}
+
+#mapScreen .phase-card img {
+    height: 53px;
+    width: 65px;
+}
+
+#mapScreen .phase-card strong {
+    font-size: 11px;
+}
+
+#mapScreen .phase-card .starline {
+    font-size: 15px;
+}
+
+#mapScreen .phase-card small {
+    font-size: 9px;
+}
+
+#mapScreen .phase-card .phase-level {
+    font-size: 10px;
+    color: #87e4ff;
+    font-weight: 750;
+    text-align: center;
+    line-height: 1.25;
+    min-height: 16px;
+}
+
+#mapScreen > .secondary {
+    padding: 8px 14px;
+}
+
+/* CAMPO DE RESPOSTA NUMERICA */
+
+.numeric-answer {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    border: 2px solid #60d6ee;
+    border-radius: 8px;
+    background: #051525;
+    color: #f4fcff;
+    font-size: 18px;
+    padding: 10px 12px;
+    font-family: inherit;
+}
+
+.numeric-answer:focus-visible {
+    outline: 3px solid #ffdb79;
+    outline-offset: 2px;
+}
+
+#answerButtons .numeric-answer + button {
+    margin-top: 4px;
+    text-align: center;
+    background: #0f607d;
+    border-color: #6ceaff;
+}
+
+/* VERSAO PARA CELULAR */
+
+@media (max-width: 700px) {
+    #mapScreen.mobile-screen {
+        gap: 11px;
+        padding: 52px 14px 22px;
+    }
+
+    #mapScreen.mobile-screen h2 {
+        font-size: 25px;
+    }
+
+    #mapScreen.mobile-screen .phase-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin: 10px 0;
+    }
+
+    #mapScreen.mobile-screen .phase-card {
+        min-height: 141px;
+    }
+}
